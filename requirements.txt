@@ -1,0 +1,17 @@
+
+fastapi
+uvicorn[standard]
+
+sqlalchemy[asyncio]
+asyncmy
+
+pydantic
+pydantic-settings
+email-validator
+
+python-jose[cryptography]
+pwdlib[argon2]
+python-multipart
+
+pytest
+httpx

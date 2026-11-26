@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.schemas.common import MessageResponse
-from app.routers import categories, quizzes, users, questions, attempts
+from app.routers import auth, categories, quizzes, users, questions, attempts
 
 # Central API Router with API versioning prefix
 api_router = APIRouter(prefix="/api/v1")
@@ -22,6 +22,7 @@ async def api_ping():
     )
 
 # Mount Module Routers
+api_router.include_router(auth.router)
 api_router.include_router(categories.router)
 api_router.include_router(users.router)
 api_router.include_router(quizzes.router)

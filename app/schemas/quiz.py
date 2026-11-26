@@ -13,7 +13,7 @@ class QuizBase(BaseModel):
 
 
 class QuizCreate(QuizBase):
-    creator_id: int = Field(..., description="ID of the user creating the quiz")
+    creator_id: Optional[int] = Field(None, description="Optional: automatically assigned to authenticated user")
 
 
 class QuizUpdate(BaseModel):

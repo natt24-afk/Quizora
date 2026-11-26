@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, status
 
-from app.core.dependencies import DbSession
+from app.core.dependencies import DbSession, RequireTeacherOrAdmin
 from app.schemas.question import QuestionCreate, QuestionUpdate, QuestionResponse
 from app.services.question_service import QuestionService
 
@@ -12,9 +12,13 @@ router = APIRouter(prefix="/questions", tags=["Questions"])
     "/",
     response_model=QuestionResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create a question with choices",
+    summary="Create a question with choices (Teacher/Admin only)",
 )
-async def create_question(data: QuestionCreate, db: DbSession):
+async def create_question(
+    data: QuestionCreate,
+    db: DbSession,
+    current_user: RequireTeacherOrAdmin,
+):
     service = QuestionService(db)
     return await service.create_question(data)
 
@@ -45,10 +49,13 @@ async def get_question(question_id: int, db: DbSession):
     "/{question_id}",
     response_model=QuestionResponse,
     status_code=status.HTTP_200_OK,
-    summary="Update a question by ID",
+    summary="Update a question by ID (Teacher/Admin only)",
 )
 async def update_question(
-    question_id: int, data: QuestionUpdate, db: DbSession
+    question_id: int,
+    data: QuestionUpdate,
+    db: DbSession,
+    current_user: RequireTeacherOrAdmin,
 ):
     service = QuestionService(db)
     return await service.update_question(question_id, data)
@@ -57,8 +64,12 @@ async def update_question(
 @router.delete(
     "/{question_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete a question by ID",
+    summary="Delete a question by ID (Teacher/Admin only)",
 )
-async def delete_question(question_id: int, db: DbSession):
+async def delete_question(
+    question_id: int,
+    db: DbSession,
+    current_user: RequireTeacherOrAdmin,
+):
     service = QuestionService(db)
     await service.delete_question(question_id)

@@ -1,7 +1,7 @@
 from typing import Optional
 from fastapi import APIRouter, Query, status
 
-from app.core.dependencies import DbSession
+from app.core.dependencies import DbSession, RequireTeacherOrAdmin
 from app.schemas.common import PaginatedResponse
 from app.schemas.quiz import QuizCreate, QuizUpdate, QuizResponse
 from app.services.quiz_service import QuizService
@@ -13,9 +13,16 @@ router = APIRouter(prefix="/quizzes", tags=["Quizzes"])
     "/",
     response_model=QuizResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create a new quiz",
+    summary="Create a new quiz (Teacher/Admin only)",
 )
-async def create_quiz(data: QuizCreate, db: DbSession):
+async def create_quiz(
+    data: QuizCreate,
+    db: DbSession,
+    current_user: RequireTeacherOrAdmin,
+):
+    """Only teachers and admins can create quizzes."""
+    # Automatically assign the creator to the authenticated teacher/admin
+    data.creator_id = current_user.id
     service = QuizService(db)
     return await service.create_quiz(data)
 
@@ -59,9 +66,14 @@ async def get_quiz(quiz_id: int, db: DbSession):
     "/{quiz_id}",
     response_model=QuizResponse,
     status_code=status.HTTP_200_OK,
-    summary="Update a quiz by ID",
+    summary="Update a quiz by ID (Teacher/Admin only)",
 )
-async def update_quiz(quiz_id: int, data: QuizUpdate, db: DbSession):
+async def update_quiz(
+    quiz_id: int,
+    data: QuizUpdate,
+    db: DbSession,
+    current_user: RequireTeacherOrAdmin,
+):
     service = QuizService(db)
     return await service.update_quiz(quiz_id, data)
 
@@ -69,8 +81,12 @@ async def update_quiz(quiz_id: int, data: QuizUpdate, db: DbSession):
 @router.delete(
     "/{quiz_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete a quiz by ID",
+    summary="Delete a quiz by ID (Teacher/Admin only)",
 )
-async def delete_quiz(quiz_id: int, db: DbSession):
+async def delete_quiz(
+    quiz_id: int,
+    db: DbSession,
+    current_user: RequireTeacherOrAdmin,
+):
     service = QuizService(db)
     await service.delete_quiz(quiz_id)

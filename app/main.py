@@ -1,8 +1,10 @@
+import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.exceptions import setup_exception_handlers
 from app.database.connection import engine
 from app.routers import api_router
 
@@ -13,10 +15,8 @@ async def lifespan(app: FastAPI):
     Application lifespan manager.
     Executes startup and shutdown tasks asynchronously.
     """
-    # Startup: Can log startup or verify database connectivity
     print(f"Starting {settings.APP_NAME} in {settings.APP_ENV} mode...")
     yield
-    # Shutdown: Safely dispose the async database connection pool
     print(f"Shutting down {settings.APP_NAME} database engine...")
     await engine.dispose()
 
@@ -30,17 +30,31 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS (Cross-Origin Resource Sharing) Middleware
-# Required so Android emulators, physical devices, or web clients can connect
+# 1. Custom HTTP Middleware: Latency & Performance Header 
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    """Measures endpoint execution duration and appends X-Process-Time header."""
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    process_time = time.perf_counter() - start_time
+    response.headers["X-Process-Time"] = f"{process_time:.4f}s"
+    return response
+
+
+# 2. CORS Middleware (for Android emulators, devices, and web clients)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins in development
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Process-Time"],
 )
 
-# Mount the modular API router (all versioned endpoints live under /api/v1)
+# 3. Register Centralized Exception Handlers 
+setup_exception_handlers(app)
+
+# 4. Mount the Versioned Modular API Router (/api/v1)
 app.include_router(api_router)
 
 

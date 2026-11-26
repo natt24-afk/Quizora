@@ -8,6 +8,7 @@ from app.core.security import decode_access_token
 from app.database.connection import get_db
 from app.models.user import User, UserRole
 from app.repositories.user_repository import UserRepository
+from fastapi import Query
 
 # 1. Database Session Injection
 DbSession = Annotated[AsyncSession, Depends(get_db)]
@@ -105,3 +106,43 @@ async def verify_api_key(
             detail="Invalid or missing X-API-Key header",
         )
     return api_key
+
+# 8. Reusable Pagination Dependency 
+class PaginationParams:
+    """
+    Standard pagination dependency.
+    Validates page >= 1, size between 1 and 100, and calculates SQL offset.
+    """
+    def __init__(
+        self,
+        page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+        size: int = Query(20, ge=1, le=100, description="Items per page (max 100)"),
+    ):
+        self.page = page
+        self.size = size
+
+    @property
+    def skip(self) -> int:
+        return (self.page - 1) * self.size
+
+
+Pagination = Annotated[PaginationParams, Depends()]
+
+
+# 9. Reusable Quiz Search and Filtering Dependency 
+class QuizFilterParams:
+    """
+    Standard search and filter parameters for quizzes.
+    """
+    def __init__(
+        self,
+        category_id: Optional[int] = Query(None, description="Filter by category ID"),
+        is_published: Optional[bool] = Query(None, description="Filter by published status"),
+        search: Optional[str] = Query(None, min_length=1, max_length=100, description="Search quiz title"),
+    ):
+        self.category_id = category_id
+        self.is_published = is_published
+        self.search = search
+
+
+QuizFilters = Annotated[QuizFilterParams, Depends()]
